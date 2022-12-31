@@ -1,6 +1,9 @@
+import { ChangeEventHandler, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
+import { AiOutlineCloudUpload } from "react-icons/ai";
 import { useUser } from "../../context/UserContext";
+import User from "../../types/User";
 
 type Inputs = {
   name: string;
@@ -18,26 +21,64 @@ const Signup = () => {
     formState: { errors },
   } = useForm<Inputs>();
   const { setUser } = useUser();
+  const [photo, setPhoto] = useState("");
+
+  const handlePhotoChange: ChangeEventHandler<HTMLInputElement> = async (
+    event
+  ) => {
+    const apiKey = "e9bb5812e9997b781892f16ac6b11cc7";
+    const imageFile = event.target.files?.[0];
+    const formData = new FormData();
+    formData.append("key", apiKey);
+    formData.append("image", imageFile!);
+    const loadingId = toast.loading("Uploading...");
+
+    try {
+      const res = await fetch("https://api.imgbb.com/1/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await res.json();
+      toast.dismiss(loadingId);
+      setPhoto(result.data.url);
+    } catch (error) {
+      console.log(error);
+      toast.dismiss(loadingId);
+    }
+  };
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    const res = await fetch(
-      "https://kaizenresale.000webhostapp.com/api/user/signup.php",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(data),
+    const { confirmPassword, ...otherData } = data;
+    console.log({ ...otherData, photo });
+    if (photo) {
+      const loadingId = toast.loading("Loading...");
+      try {
+        const res = await fetch(
+          "https://kaizenresale.000webhostapp.com/api/user/signup.php",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ...otherData, photo }),
+          }
+        );
+        const result = await (res.json() as Promise<{
+          data: User;
+          message?: string;
+        }>);
+        console.log(result);
+        toast.dismiss(loadingId);
+        toast.success(result.message!);
+        setUser(result.data);
+        localStorage.setItem("currentUser", JSON.stringify(result.data));
+      } catch (error) {
+        console.log(error);
+        toast.dismiss(loadingId);
       }
-    );
-    const result = await (res.json() as Promise<{
-      data: { name: string; email: string; role: string };
-      message?: string;
-    }>);
-    console.log(result);
-    toast.success(result.message!);
-    setUser(result.data);
-    localStorage.setItem("currentUser", JSON.stringify(result.data));
+    } else {
+      toast.error("You need to upload a photo");
+    }
   };
 
   return (
@@ -110,11 +151,6 @@ const Signup = () => {
                   Confirm password is required
                 </span>
               )}
-              <label className="label">
-                <a href="#" className="label-text-alt link link-hover">
-                  Forgot password?
-                </a>
-              </label>
             </div>
             <div className="form-control">
               <label className="label">
@@ -122,13 +158,31 @@ const Signup = () => {
               </label>
               <select
                 {...register("role", { required: true })}
-                className="select w-full max-w-xs"
+                className="select w-full max-w-xs input-bordered"
               >
                 <option>user</option>
                 <option>seller</option>
               </select>
               {errors.role && (
                 <span className="text-red-500 mt-2">Role is required</span>
+              )}
+            </div>
+            <div className="form-control">
+              <input
+                type="file"
+                className="input input-bordered hidden"
+                {...register("photo", { required: true })}
+                id="photo"
+                onChange={handlePhotoChange}
+              />
+              <label htmlFor="photo">
+                <span className="btn btn-primary">
+                  <AiOutlineCloudUpload className="text-2xl mr-2" /> Upload
+                  Image
+                </span>
+              </label>
+              {errors.photo && (
+                <span className="text-red-500 mt-2">Photo is required</span>
               )}
             </div>
             <div className="form-control mt-6">

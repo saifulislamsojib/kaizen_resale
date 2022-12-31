@@ -1,25 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-
-const navItems = [
-  {
-    name: "Home",
-    path: "/",
-  },
-  {
-    name: "Categories",
-    path: "/categories",
-  },
-  {
-    name: "Login",
-    path: "/login",
-  },
-  {
-    name: "Signup",
-    path: "/signup",
-  },
-];
+import User from "../types/User";
 
 const Navbar = () => {
   const [toggle, setToggle] = useState(false);
@@ -29,15 +11,37 @@ const Navbar = () => {
 
   const { setUser, user } = useUser();
 
+  const navItems = [
+    {
+      name: "Home",
+      path: "/",
+      show: true,
+    },
+    {
+      name: "Categories",
+      path: "/categories",
+      show: true,
+    },
+    {
+      name: "Login",
+      path: "/login",
+      show: !user.email,
+    },
+    {
+      name: "Signup",
+      path: "/signup",
+      show: !user.email,
+    },
+  ];
+
   const handleLogout = () => {
-    setUser({});
+    setUser({} as User);
     localStorage.removeItem("currentUser");
   };
 
   useEffect(() => {
     const html = document.querySelector("html");
     html?.removeAttribute("data-theme");
-    console.log(dark);
     if (dark) {
       html?.setAttribute("data-theme", "dark");
       localStorage.setItem("theme", "dark");
@@ -60,20 +64,22 @@ const Navbar = () => {
             toggle ? "left-0" : "left-[-100%]"
           }`}
         >
-          {navItems.map(({ name, path }) => (
-            <li key={path} className="mx-2 mb-3 md:mb-0">
-              <NavLink
-                onClick={() => setToggle((pre) => !pre)}
-                to={path}
-                className={({ isActive }) =>
-                  isActive ? "px-2 text-orange-700" : "px-2 text-black"
-                }
-                end
-              >
-                {name}
-              </NavLink>
-            </li>
-          ))}
+          {navItems
+            .filter(({ show }) => show)
+            .map(({ name, path }) => (
+              <li key={path} className="mx-2 mb-3 md:mb-0">
+                <NavLink
+                  onClick={() => setToggle((pre) => !pre)}
+                  to={path}
+                  className={({ isActive }) =>
+                    isActive ? "px-2 text-orange-700" : "px-2"
+                  }
+                  end
+                >
+                  {name}
+                </NavLink>
+              </li>
+            ))}
         </ul>
         <label className="swap swap-rotate mr-2">
           <input onClick={() => setDark((pre) => !pre)} type="checkbox" />

@@ -1,4 +1,49 @@
+import { SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "react-hot-toast";
+import { useUser } from "../../context/UserContext";
+import User from "../../types/User";
+
+type Inputs = {
+  email: string;
+  password: string;
+};
+
 const Login = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<Inputs>();
+  const { setUser } = useUser();
+
+  const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    const loadingId = toast.loading("Loading...");
+    try {
+      const res = await fetch(
+        "https://kaizenresale.000webhostapp.com/api/user/login.php",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+      const result = await (res.json() as Promise<{
+        data: User;
+        message?: string;
+      }>);
+      console.log(result);
+      toast.dismiss(loadingId);
+      toast.success(result.message!);
+      setUser(result.data);
+      localStorage.setItem("currentUser", JSON.stringify(result.data));
+    } catch (error) {
+      console.log(error);
+      toast.dismiss(loadingId);
+    }
+  };
+
   return (
     <div className="hero min-h-screen">
       <div className="hero-content flex-col lg:flex-row-reverse">
@@ -11,26 +56,34 @@ const Login = () => {
           </p>
         </div>
         <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-          <div className="card-body">
+          <form onSubmit={handleSubmit(onSubmit)} className="card-body">
             <div className="form-control">
               <label className="label">
                 <span className="label-text">Email</span>
               </label>
               <input
-                type="text"
-                placeholder="email"
+                type="email"
+                placeholder="Email"
                 className="input input-bordered"
+                {...register("email", { required: true })}
               />
+              {errors.email && (
+                <span className="text-red-500 mt-2">Email is required</span>
+              )}
             </div>
             <div className="form-control">
               <label className="label">
                 <span className="label-text">Password</span>
               </label>
               <input
-                type="text"
-                placeholder="password"
+                type="password"
+                placeholder="Password"
                 className="input input-bordered"
+                {...register("password", { required: true })}
               />
+              {errors.password && (
+                <span className="text-red-500 mt-2">Password is required</span>
+              )}
               <label className="label">
                 <a href="#" className="label-text-alt link link-hover">
                   Forgot password?
@@ -40,7 +93,7 @@ const Login = () => {
             <div className="form-control mt-6">
               <button className="btn btn-primary">Login</button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
